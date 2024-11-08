@@ -62,21 +62,35 @@ export async function getAccessToken(): Promise<string | null> {
   return null;
 }
 
-// Rest of the file remains unchanged
-export async function searchTracks(query: string, filters: any, token: string) {
+export async function searchTracks(filters: any, token: string) {
   try {
+    let searchQuery = '';
+
+    // Build search query based on active filters
+    if (filters.artist) {
+      searchQuery += `artist:${filters.artist} `;
+    }
+    if (filters.genre) {
+      searchQuery += `genre:${filters.genre} `;
+    }
+    if (filters.yearStart && filters.yearEnd) {
+      searchQuery += `year:${filters.yearStart}-${filters.yearEnd} `;
+    } else if (filters.yearStart) {
+      searchQuery += `year:${filters.yearStart} `;
+    } else if (filters.yearEnd) {
+      searchQuery += `year:${filters.yearEnd} `;
+    }
+
+    // If no filters are active, return empty array
+    if (!searchQuery.trim()) {
+      return [];
+    }
+
     const params = new URLSearchParams({
-      q: query,
+      q: searchQuery.trim(),
       type: 'track',
       limit: '20'
     });
-
-    if (filters.yearStart && filters.yearEnd) {
-      params.append('q', ` year:${filters.yearStart}-${filters.yearEnd}`);
-    }
-    if (filters.genre) {
-      params.append('q', ` genre:${filters.genre}`);
-    }
 
     const response = await fetch(`https://api.spotify.com/v1/search?${params}`, {
       headers: {

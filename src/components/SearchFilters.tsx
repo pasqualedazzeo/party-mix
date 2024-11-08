@@ -1,6 +1,6 @@
 import React from 'react';
-import { Slider } from './Slider';
-import { Music, Gauge, Trophy, Radio } from 'lucide-react';
+import { Music, Radio, Calendar } from 'lucide-react';
+import type { FilterOptions } from '../types';
 
 interface SearchFiltersProps {
   filters: FilterOptions;
@@ -14,91 +14,72 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-lg space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Fine-tune Your Mix</h2>
+    <div className="bg-dark-surface rounded-xl p-3 shadow-2xl transition-all duration-300 hover:shadow-spotify-green/20 w-full">
+      <h2 className="text-xl font-bold text-spotify-green mb-3 tracking-tight">
+        Customize Your Playlist
+      </h2>
       
-      <div className="space-y-4">
-        <div className="flex items-center space-x-3">
-          <Music className="w-5 h-5 text-purple-500" />
-          <input
-            type="text"
-            name="artist"
-            placeholder="Artist name"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            value={filters.artist}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <Radio className="w-5 h-5 text-purple-500" />
-          <select
-            name="genre"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            value={filters.genre}
-            onChange={handleInputChange}
-          >
-            <option value="">Select Genre</option>
-            <option value="pop">Pop</option>
-            <option value="rock">Rock</option>
-            <option value="hip-hop">Hip Hop</option>
-            <option value="electronic">Electronic</option>
-            <option value="latin">Latin</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            type="number"
-            name="yearStart"
-            placeholder="From Year"
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            value={filters.yearStart}
-            onChange={handleInputChange}
-          />
-          <input
-            type="number"
-            name="yearEnd"
-            placeholder="To Year"
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            value={filters.yearEnd}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <Gauge className="w-5 h-5 text-purple-500" />
-                <span className="text-sm font-medium text-gray-700">Tempo (BPM)</span>
-              </div>
-              <span className="text-sm text-gray-500">{filters.tempo}</span>
-            </div>
-            <Slider
-              name="tempo"
-              min={60}
-              max={200}
-              value={filters.tempo}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative group flex-1 min-w-[200px]">
+          <div className="absolute -inset-0.5 bg-spotify-green/20 rounded-lg opacity-50 group-hover:opacity-75 transition duration-300 blur"></div>
+          <div className="relative flex items-center bg-dark-bg border border-dark-highlight rounded-lg h-9">
+            <Music className="w-4 h-4 text-spotify-green opacity-70 group-hover:opacity-100 transition ml-2" />
+            <input
+              type="text"
+              name="artist"
+              placeholder="Artist name"
+              className="w-full px-2 bg-transparent focus:outline-none text-dark-text placeholder-dark-text/50 text-sm"
+              value={filters.artist}
               onChange={handleInputChange}
             />
           </div>
+        </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <Trophy className="w-5 h-5 text-purple-500" />
-                <span className="text-sm font-medium text-gray-700">Popularity</span>
-              </div>
-              <span className="text-sm text-gray-500">{filters.popularity}%</span>
-            </div>
-            <Slider
-              name="popularity"
-              min={0}
-              max={100}
-              value={filters.popularity}
+        <div className="relative group flex-1 min-w-[200px]">
+          <div className="absolute -inset-0.5 bg-spotify-green/20 rounded-lg opacity-50 group-hover:opacity-75 transition duration-300 blur"></div>
+          <div className="relative flex items-center bg-dark-bg border border-dark-highlight rounded-lg h-9">
+            <Radio className="w-4 h-4 text-spotify-green opacity-70 group-hover:opacity-100 transition ml-2" />
+            <select
+              name="genre"
+              className="w-full px-2 bg-transparent focus:outline-none text-dark-text text-sm appearance-none cursor-pointer"
+              value={filters.genre}
               onChange={handleInputChange}
-            />
+            >
+              <option value="" className="bg-dark-bg text-dark-text">Select Genre</option>
+              <option value="pop" className="bg-dark-bg text-dark-text">Pop</option>
+              <option value="rock" className="bg-dark-bg text-dark-text">Rock</option>
+              <option value="hip-hop" className="bg-dark-bg text-dark-text">Hip Hop</option>
+              <option value="electronic" className="bg-dark-bg text-dark-text">Electronic</option>
+              <option value="latin" className="bg-dark-bg text-dark-text">Latin</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="relative group flex-1 min-w-[200px]">
+          <div className="absolute -inset-0.5 bg-spotify-green/20 rounded-lg opacity-50 group-hover:opacity-75 transition duration-300 blur"></div>
+          <div className="relative bg-dark-bg border border-dark-highlight rounded-lg h-9">
+            <div className="flex items-center px-2 h-full">
+              <Calendar className="w-4 h-4 text-spotify-green opacity-70 group-hover:opacity-100 transition flex-shrink-0" />
+              <div className="flex items-center gap-1 ml-2 w-full">
+                <input
+                  type="number"
+                  name="yearStart"
+                  placeholder="From"
+                  className="w-full bg-transparent focus:outline-none text-dark-text placeholder-dark-text/50 text-sm"
+                  value={filters.yearStart}
+                  onChange={handleInputChange}
+                />
+                <span className="text-dark-text/50 text-sm">-</span>
+                <input
+                  type="number"
+                  name="yearEnd"
+                  placeholder="To"
+                  className="w-full bg-transparent focus:outline-none text-dark-text placeholder-dark-text/50 text-sm"
+                  value={filters.yearEnd}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

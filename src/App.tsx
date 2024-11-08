@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SearchFilters } from './components/SearchFilters';
 import { TrackList } from './components/TrackList';
 import { SpotifyLogin } from './components/SpotifyLogin';
@@ -36,11 +36,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (token && filters.artist) {
+    if (token && (filters.artist || filters.genre || filters.yearStart || filters.yearEnd)) {
       const delayDebounceFn = setTimeout(async () => {
         setIsLoading(true);
         try {
-          const searchResults = await searchTracks(filters.artist, filters, token);
+          const searchResults = await searchTracks(filters, token);
           setTracks(searchResults);
         } catch (error) {
           console.error('Error searching tracks:', error);
@@ -102,56 +102,54 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-purple-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-dark-bg text-dark-text">
+      <header className="bg-dark-surface text-dark-text shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center space-x-3">
-            <Music2 className="w-8 h-8" />
-            <h1 className="text-3xl font-bold">Party Mix Master</h1>
+            <Music2 className="w-8 h-8 text-spotify-green" />
+            <h1 className="text-3xl font-bold text-spotify-green">Party Mix Master</h1>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <SearchFilters
-              filters={filters}
-              onFilterChange={handleFilterChange}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <SearchFilters
+            filters={filters}
+            onFilterChange={handleFilterChange}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-dark-surface rounded-lg p-6 shadow-lg">
+            <h2 className="text-2xl font-bold text-spotify-green mb-4">
+              {isLoading ? 'Searching...' : 'Recommended Tracks'}
+            </h2>
+            <TrackList
+              tracks={tracks}
+              onAddToPlaylist={handleAddToPlaylist}
+              currentlyPlaying={currentlyPlaying}
+              onPlayPreview={handlePlayPreview}
             />
           </div>
 
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white rounded-lg p-6 shadow-lg">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                {isLoading ? 'Searching...' : 'Recommended Tracks'}
-              </h2>
-              <TrackList
-                tracks={tracks}
-                onAddToPlaylist={handleAddToPlaylist}
-                currentlyPlaying={currentlyPlaying}
-                onPlayPreview={handlePlayPreview}
-              />
+          <div className="bg-dark-surface rounded-lg p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-spotify-green">Your Party Playlist</h2>
+              <button
+                className="px-4 py-2 bg-spotify-green text-dark-bg rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSavePlaylist}
+                disabled={playlist.length === 0}
+              >
+                Save to Spotify
+              </button>
             </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Your Party Playlist</h2>
-                <button
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleSavePlaylist}
-                  disabled={playlist.length === 0}
-                >
-                  Save to Spotify
-                </button>
-              </div>
-              <TrackList
-                tracks={playlist}
-                onAddToPlaylist={handleAddToPlaylist}
-                currentlyPlaying={currentlyPlaying}
-                onPlayPreview={handlePlayPreview}
-              />
-            </div>
+            <TrackList
+              tracks={playlist}
+              onAddToPlaylist={handleAddToPlaylist}
+              currentlyPlaying={currentlyPlaying}
+              onPlayPreview={handlePlayPreview}
+            />
           </div>
         </div>
       </main>

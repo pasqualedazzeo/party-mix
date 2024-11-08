@@ -17,7 +17,7 @@ export function Slider({ name, min, max, value, onChange }: SliderProps) {
       max={max}
       value={value}
       onChange={onChange}
-      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+      className="w-full h-2 bg-dark-highlight rounded-lg appearance-none cursor-pointer accent-spotify-green"
     />
   );
 }

@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  @apply bg-dark-bg text-dark-text;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-surface;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-spotify-green rounded-full;
+}
+
+/* Spotify-like green focus and selection styles */
+::selection {
+  @apply bg-spotify-green text-dark-bg;
+}
+
+/* Buttons and interactive elements */
+button {
+  @apply transition-colors duration-300 ease-in-out;
+}
+
+button:hover {
+  @apply bg-dark-highlight;
+}
+
+.spotify-green-button {
+  @apply bg-spotify-green text-dark-bg hover:opacity-90;
+}
+
+/* Additional global styles to enhance dark theme */
+a {
+  @apply text-spotify-green hover:text-opacity-80;
+}
+
+input, textarea {
+  @apply bg-dark-surface text-dark-text border-dark-highlight;
+}

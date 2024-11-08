@@ -1,4 +1,3 @@
-import React from 'react';
 import { Play, Plus, Pause } from 'lucide-react';
 import type { Track } from '../types';
 
@@ -10,56 +9,60 @@ interface TrackListProps {
 }
 
 export function TrackList({ tracks, onAddToPlaylist, currentlyPlaying, onPlayPreview }: TrackListProps) {
+  if (tracks.length === 0) {
+    return (
+      <div className="text-center text-dark-text py-4">
+        No tracks found. Try adjusting your search filters.
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow-lg">
+    <div className="bg-dark-surface rounded-lg shadow-lg">
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
+        <table className="w-full table-fixed">
+          <thead className="bg-dark-highlight">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Track</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artist</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Album</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="w-[45%] px-2 py-2 text-left text-xs font-medium text-spotify-green uppercase tracking-wider">Track</th>
+              <th className="w-[35%] px-2 py-2 text-left text-xs font-medium text-spotify-green uppercase tracking-wider hidden md:table-cell">Artist</th>
+              <th className="w-[20%] px-2 py-2 text-right text-xs font-medium text-spotify-green uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-dark-surface divide-y divide-dark-highlight">
             {tracks.map((track) => (
-              <tr key={track.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <img className="h-10 w-10 rounded-sm" src={track.imageUrl} alt={track.title} />
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{track.title}</div>
+              <tr key={track.id} className="hover:bg-dark-highlight transition-colors">
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center gap-2">
+                    <img className="h-8 w-8 rounded-sm flex-shrink-0" src={track.imageUrl} alt={track.title} />
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-dark-text truncate">{track.title}</div>
+                      <div className="text-xs text-dark-text/70 truncate">{track.artist}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{track.artist}</div>
+                <td className="px-2 py-1.5 hidden md:table-cell">
+                  <div className="text-sm text-dark-text truncate">{track.artist}</div>
+                  <div className="text-xs text-dark-text/70 truncate">{track.album}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{track.album}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {track.duration}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center justify-end space-x-3">
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center justify-end gap-1">
                     <button
                       onClick={() => onPlayPreview(track.id)}
-                      className="text-purple-600 hover:text-purple-900"
+                      className="text-spotify-green hover:opacity-80 transition-opacity p-1"
+                      title="Play preview"
                     >
                       {currentlyPlaying === track.id ? (
-                        <Pause className="w-5 h-5" />
+                        <Pause className="w-4 h-4" />
                       ) : (
-                        <Play className="w-5 h-5" />
+                        <Play className="w-4 h-4" />
                       )}
                     </button>
                     <button
                       onClick={() => onAddToPlaylist(track)}
-                      className="text-purple-600 hover:text-purple-900"
+                      className="text-spotify-green hover:opacity-80 transition-opacity p-1"
+                      title="Add to playlist"
                     >
-                      <Plus className="w-5 h-5" />
+                      <Plus className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
