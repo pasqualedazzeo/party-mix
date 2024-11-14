@@ -9,32 +9,43 @@ const SCOPES = [
   'playlist-modify-private',
   'user-read-private',
   'user-read-email',
-  'streaming'
+  'streaming',
+  'user-read-playback-state',
+  'user-modify-playback-state',
+  'user-read-currently-playing'
 ].join(' ');
 
 export const loginUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(SCOPES)}`;
 
 async function getTokenFromCode(code: string): Promise<string> {
-  const basicAuth = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
-  const response = await fetch(TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${basicAuth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: REDIRECT_URI,
-    }),
-  });
+  const params = new URLSearchParams();
+  params.append('grant_type', 'authorization_code');
+  params.append('code', code);
+  params.append('redirect_uri', REDIRECT_URI);
+  params.append('client_id', CLIENT_ID);
+  params.append('client_secret', CLIENT_SECRET);
 
-  if (!response.ok) {
-    throw new Error('Failed to get access token');
+  try {
+    const response = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Token exchange failed:', errorData);
+      throw new Error(`Failed to get access token: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.access_token;
+  } catch (error) {
+    console.error('Token exchange error:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.access_token;
 }
 
 export async function getAccessToken(): Promise<string | null> {
@@ -45,17 +56,26 @@ export async function getAccessToken(): Promise<string | null> {
 
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('code');
+  const error = urlParams.get('error');
+
+  if (error) {
+    console.error('Authorization error:', error);
+    return null;
+  }
 
   if (code) {
     try {
       const token = await getTokenFromCode(code);
-      localStorage.setItem('spotify_token', token);
-      // Clean up the URL
-      window.history.replaceState({}, document.title, '/');
-      return token;
+      if (token) {
+        localStorage.setItem('spotify_token', token);
+        // Clean up the URL
+        window.history.replaceState({}, document.title, '/');
+        return token;
+      }
     } catch (error) {
       console.error('Error getting token:', error);
-      return null;
+      // Clear any existing token if exchange fails
+      localStorage.removeItem('spotify_token');
     }
   }
 

@@ -15,3 +15,10 @@ export interface FilterOptions {
   yearStart: string;
   yearEnd: string;
 }
+
+declare global {
+  interface Window {
+    onSpotifyWebPlaybackSDKReady: () => void;
+    spotifySDKReady: boolean;
+  }
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { SearchFilters } from './components/SearchFilters';
 import { TrackList } from './components/TrackList';
 import { SpotifyLogin } from './components/SpotifyLogin';
+import WebPlayback from './components/WebPlayback';
 import { Music2 } from 'lucide-react';
 import type { Track, FilterOptions } from './types';
 import { getAccessToken, searchTracks, createPlaylist, getCurrentUser } from './utils/spotify';
@@ -13,6 +14,7 @@ function App() {
   const [playlist, setPlaylist] = useState<Track[]>([]);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [filters, setFilters] = useState<FilterOptions>({
     artist: '',
     genre: '',
@@ -60,20 +62,21 @@ function App() {
   };
 
   const handlePlayPreview = (trackId: string) => {
+    const track = [...tracks, ...playlist].find(t => t.id === trackId);
+    if (!track) return;
+
     if (currentlyPlaying === trackId) {
-      const audio = document.querySelector('audio');
-      if (audio) {
-        audio.pause();
-      }
       setCurrentlyPlaying(null);
+      setCurrentTrack(null);
     } else {
-      const track = [...tracks, ...playlist].find(t => t.id === trackId);
-      if (track?.previewUrl) {
-        const audio = document.querySelector('audio') || new Audio();
-        audio.src = track.previewUrl;
-        audio.play();
+      // Force iframe reload by recreating it
+      setCurrentTrack(null);
+      setCurrentlyPlaying(null);
+      
+      requestAnimationFrame(() => {
+        setCurrentTrack(track);
         setCurrentlyPlaying(trackId);
-      }
+      });
     }
   };
 
@@ -103,6 +106,7 @@ function App() {
     setTracks([]);
     setPlaylist([]);
     setCurrentlyPlaying(null);
+    setCurrentTrack(null);
     setFilters({
       artist: '',
       genre: '',
@@ -142,6 +146,14 @@ function App() {
           />
         </div>
 
+        {currentTrack && (
+          <WebPlayback
+            token={token}
+            spotifyTrack={currentTrack}
+            onClose={() => setCurrentTrack(null)}
+          />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-dark-surface rounded-lg p-6 shadow-lg">
             <h2 className="text-2xl font-bold text-spotify-green mb-4">
@@ -175,7 +187,6 @@ function App() {
           </div>
         </div>
       </main>
-      <audio style={{ display: 'none' }} onEnded={() => setCurrentlyPlaying(null)} />
     </div>
   );
 }
