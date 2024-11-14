@@ -17,10 +17,7 @@ function App() {
     artist: '',
     genre: '',
     yearStart: '',
-    yearEnd: '',
-    tempo: 120,
-    popularity: 50,
-    danceability: 70
+    yearEnd: ''
   });
 
   useEffect(() => {
@@ -97,6 +94,23 @@ function App() {
     }
   };
 
+  // New logout handler
+  const handleLogout = () => {
+    // Clear token and userId to force re-authentication
+    setToken(null);
+    setUserId(null);
+    // Clear other states to reset the app
+    setTracks([]);
+    setPlaylist([]);
+    setCurrentlyPlaying(null);
+    setFilters({
+      artist: '',
+      genre: '',
+      yearStart: '',
+      yearEnd: ''
+    });
+  };
+
   if (!token) {
     return <SpotifyLogin />;
   }
@@ -105,9 +119,17 @@ function App() {
     <div className="min-h-screen bg-dark-bg text-dark-text">
       <header className="bg-dark-surface text-dark-text shadow-lg">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center space-x-3">
-            <Music2 className="w-8 h-8 text-spotify-green" />
-            <h1 className="text-3xl font-bold text-spotify-green">Party Mix Master</h1>
+          <div className="flex items-center justify-between space-x-3">
+            <div className="flex items-center space-x-3">
+              <Music2 className="w-8 h-8 text-spotify-green" />
+              <h1 className="text-3xl font-bold text-spotify-green">Party Mix Master</h1>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </header>

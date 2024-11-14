@@ -14,7 +14,4 @@ export interface FilterOptions {
   genre: string;
   yearStart: string;
   yearEnd: string;
-  danceability: number;
-  tempo: number;
-  popularity: number;
 }

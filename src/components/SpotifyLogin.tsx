@@ -3,21 +3,24 @@ import { loginUrl } from '../utils/spotify';
 
 export function SpotifyLogin() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-indigo-800 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8 text-center">
+    <div className="min-h-screen bg-dark-bg flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-dark-surface rounded-xl p-8 text-center shadow-2xl transition-all duration-300 hover:shadow-spotify-green/20">
         <div className="flex justify-center mb-6">
-          <Music2 className="w-16 h-16 text-purple-600" />
+          <Music2 className="w-16 h-16 text-spotify-green" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Party Mix Master</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-2xl font-bold text-spotify-green mb-4 tracking-tight">Party Mix Master</h1>
+        <p className="text-dark-text mb-8">
           Create the perfect playlist for your party with our smart music recommendation system.
         </p>
-        <a
-          href={loginUrl}
-          className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors duration-200"
-        >
-          Connect with Spotify
-        </a>
+        <div className="relative group inline-block">
+          <div className="absolute -inset-0.5 bg-spotify-green/20 rounded-lg opacity-50 group-hover:opacity-75 transition duration-300 blur"></div>
+          <a
+            href={loginUrl}
+            className="relative inline-flex items-center justify-center px-6 py-3 bg-dark-bg border border-dark-highlight rounded-lg text-base font-medium text-spotify-green hover:text-spotify-green/90 transition-colors duration-200"
+          >
+            Connect with Spotify
+          </a>
+        </div>
       </div>
     </div>
   );
