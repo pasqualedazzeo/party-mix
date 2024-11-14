@@ -121,16 +121,18 @@ function App() {
 
   return (
     <div className="min-h-screen bg-dark-bg text-dark-text">
-      <header className="bg-dark-surface text-dark-text shadow-lg">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between space-x-3">
-            <div className="flex items-center space-x-3">
-              <Music2 className="w-8 h-8 text-spotify-green" />
-              <h1 className="text-3xl font-bold text-spotify-green">Party Mix Master</h1>
+      <header className="bg-dark-surface text-dark-text shadow-lg sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 group">
+              <Music2 className="w-8 h-8 text-spotify-green transform group-hover:scale-110 transition-transform" />
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+                Party Mix Master
+              </h1>
             </div>
             <button 
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              className="px-4 py-2 bg-red-600/90 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md hover:shadow-lg active:scale-95 transform duration-150"
             >
               Logout
             </button>
@@ -138,8 +140,8 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="transition-all duration-300 ease-in-out">
           <SearchFilters
             filters={filters}
             onFilterChange={handleFilterChange}
@@ -147,23 +149,30 @@ function App() {
         </div>
 
         {currentTrack && (
-          <WebPlayback
-            token={token}
-            spotifyTrack={currentTrack}
-            onClose={() => setCurrentTrack(null)}
-            recommendedTracks={tracks}
-            onTrackChange={(track) => {
-              setCurrentTrack(track);
-              setCurrentlyPlaying(track.id);
-            }}
-          />
+          <div className="transition-all duration-300 ease-in-out">
+            <WebPlayback
+              token={token}
+              spotifyTrack={currentTrack}
+              onClose={() => setCurrentTrack(null)}
+              recommendedTracks={tracks}
+              onTrackChange={(track) => {
+                setCurrentTrack(track);
+                setCurrentlyPlaying(track.id);
+              }}
+            />
+          </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-dark-surface rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-bold text-spotify-green mb-4">
-              {isLoading ? 'Searching...' : 'Recommended Tracks'}
-            </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-dark-surface rounded-xl p-6 shadow-xl hover:shadow-spotify-green/10 transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+                {isLoading ? 'Searching...' : 'Recommended Tracks'}
+              </h2>
+              {isLoading && (
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-spotify-green"></div>
+              )}
+            </div>
             <TrackList
               tracks={tracks}
               onAddToPlaylist={handleAddToPlaylist}
@@ -172,20 +181,23 @@ function App() {
             />
           </div>
 
-          <div className="bg-dark-surface rounded-lg p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-spotify-green">Your Party Playlist</h2>
-              <button
-                className="px-4 py-2 bg-spotify-green text-dark-bg rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleSavePlaylist}
-                disabled={playlist.length === 0}
-              >
-                Save to Spotify
-              </button>
+          <div className="bg-dark-surface rounded-xl p-6 shadow-xl hover:shadow-spotify-green/10 transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+                Your Party Playlist
+              </h2>
+              {playlist.length > 0 && (
+                <button
+                  onClick={handleSavePlaylist}
+                  className="px-4 py-2 bg-spotify-green text-dark-bg rounded-lg hover:bg-opacity-90 transition-colors shadow-md hover:shadow-lg active:scale-95 transform duration-150 flex items-center gap-2"
+                >
+                  <span>Save to Spotify</span>
+                </button>
+              )}
             </div>
             <TrackList
               tracks={playlist}
-              onAddToPlaylist={handleAddToPlaylist}
+              onAddToPlaylist={() => {}}
               currentlyPlaying={currentlyPlaying}
               onPlayPreview={handlePlayPreview}
             />
