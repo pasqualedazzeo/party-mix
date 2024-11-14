@@ -16,9 +16,11 @@ interface WebPlaybackProps {
     token: string | null;
     spotifyTrack: Track | null;
     onClose: () => void;
+    recommendedTracks?: Track[];
+    onTrackChange?: (track: Track) => void;
 }
 
-const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose }) => {
+const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose, recommendedTracks = [], onTrackChange }) => {
     const [player, setPlayer] = useState<SpotifyPlayer>();
     const [is_active, setIsActive] = useState(false);
     const [is_playing, setIsPlaying] = useState(false);
@@ -27,6 +29,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose 
     const [isInitializing, setIsInitializing] = useState(true);
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
     const progressInterval = useRef<number>();
     const scriptRef = useRef<HTMLScriptElement | null>(null);
 
@@ -263,6 +266,35 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose 
         };
     }, [deviceId, token, spotifyTrack, player, is_active, isInitializing]);
 
+    useEffect(() => {
+        if (spotifyTrack && recommendedTracks.length > 0) {
+            const index = recommendedTracks.findIndex(track => track.id === spotifyTrack.id);
+            setCurrentTrackIndex(index);
+        }
+    }, [spotifyTrack, recommendedTracks]);
+
+    const handlePreviousTrack = async () => {
+        if (!player || recommendedTracks.length === 0) return;
+        
+        const newIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : recommendedTracks.length - 1;
+        const previousTrack = recommendedTracks[newIndex];
+        
+        if (previousTrack && onTrackChange) {
+            onTrackChange(previousTrack);
+        }
+    };
+
+    const handleNextTrack = async () => {
+        if (!player || recommendedTracks.length === 0) return;
+        
+        const newIndex = currentTrackIndex < recommendedTracks.length - 1 ? currentTrackIndex + 1 : 0;
+        const nextTrack = recommendedTracks[newIndex];
+        
+        if (nextTrack && onTrackChange) {
+            onTrackChange(nextTrack);
+        }
+    };
+
     if (isInitializing) {
         return (
             <div className="fixed bottom-0 left-0 right-0 bg-dark-surface border-t border-dark-highlight p-4">
@@ -335,8 +367,8 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose 
                         <div className="flex items-center gap-2">
                             <button 
                                 className="text-dark-text/70 hover:text-dark-text p-2 rounded-full hover:bg-dark-highlight disabled:opacity-50 transition-colors"
-                                onClick={() => player?.previousTrack()}
-                                disabled={!player || isInitializing}
+                                onClick={handlePreviousTrack}
+                                disabled={!player || isInitializing || recommendedTracks.length === 0}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
@@ -360,8 +392,8 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose 
                             </button>
                             <button 
                                 className="text-dark-text/70 hover:text-dark-text p-2 rounded-full hover:bg-dark-highlight disabled:opacity-50 transition-colors"
-                                onClick={() => player?.nextTrack()}
-                                disabled={!player || isInitializing}
+                                onClick={handleNextTrack}
+                                disabled={!player || isInitializing || recommendedTracks.length === 0}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />

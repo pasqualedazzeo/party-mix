@@ -151,6 +151,11 @@ function App() {
             token={token}
             spotifyTrack={currentTrack}
             onClose={() => setCurrentTrack(null)}
+            recommendedTracks={tracks}
+            onTrackChange={(track) => {
+              setCurrentTrack(track);
+              setCurrentlyPlaying(track.id);
+            }}
           />
         )}
 
