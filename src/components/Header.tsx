@@ -19,7 +19,7 @@ export function Header({ onLogout, userEmail, isAuthenticated }: HeaderProps) {
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Music2 className="h-8 w-8 text-spotify-green" />
-              <span className="ml-2 text-xl font-bold text-spotify-green">Party Mix</span>
+              <span className="ml-2 text-xl font-display font-semibold text-spotify-green">Party Mix</span>
             </div>
           </div>
 
@@ -31,9 +31,9 @@ export function Header({ onLogout, userEmail, isAuthenticated }: HeaderProps) {
                 <div className="relative">
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center space-x-2 text-dark-text hover:text-spotify-green transition-colors"
+                    className="flex items-center space-x-2 text-dark-text hover:text-spotify-green transition-colors font-medium"
                   >
-                    <span>{userEmail}</span>
+                    <span className="font-sans">{userEmail}</span>
                     <ChevronDown className="h-4 w-4" />
                   </button>
 
@@ -46,7 +46,7 @@ export function Header({ onLogout, userEmail, isAuthenticated }: HeaderProps) {
                             setIsDropdownOpen(false);
                             onLogout();
                           }}
-                          className="block w-full text-left px-4 py-2 text-sm text-dark-text hover:bg-dark-surface hover:text-spotify-green transition-colors"
+                          className="block w-full text-left px-4 py-2 text-sm font-medium text-dark-text hover:bg-dark-surface hover:text-spotify-green transition-colors"
                         >
                           Sign Out
                         </button>
