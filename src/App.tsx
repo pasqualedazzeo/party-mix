@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { LoadingState } from './components/LoadingState';
 import WebPlayback from './components/WebPlayback';
+import { PlaylistView } from './components/PlaylistView';
 import { Music2, Sliders, Share2 } from 'lucide-react';
 import type { Track, FilterOptions } from './types';
 import { getAccessToken, searchTracks, createPlaylist, getCurrentUser } from './utils/spotify';
@@ -26,6 +27,7 @@ function App() {
     yearStart: '',
     yearEnd: ''
   });
+  const [playlistName, setPlaylistName] = useState(`Party Mix ${new Date().toLocaleDateString()}`);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -98,6 +100,14 @@ function App() {
     }
   };
 
+  const handleRemoveTrack = (trackId: string) => {
+    setPlaylist(prev => prev.filter(track => track.id !== trackId));
+  };
+
+  const handleUpdatePlaylistName = (name: string) => {
+    setPlaylistName(name);
+  };
+
   const handleSavePlaylist = async () => {
     if (!token || !userId || playlist.length === 0) return;
 
@@ -105,7 +115,7 @@ function App() {
       await createPlaylist(
         token,
         userId,
-        `Party Mix ${new Date().toLocaleDateString()}`,
+        playlistName,
         playlist.map(track => track.id)
       );
       alert('Playlist saved to Spotify!');
@@ -218,57 +228,34 @@ function App() {
           </div>
         ) : (
           // Dashboard Content
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Search Section */}
-            <div className="bg-dark-surface rounded-xl p-6 shadow-xl transition-all duration-300">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-spotify-green mb-2">Find Tracks</h2>
-                <p className="text-dark-text/70">Use the filters below to discover the perfect tracks for your playlist.</p>
-              </div>
-              <SearchFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-              />
-            </div>
-
-            {/* Results and Playlist Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Search Results */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-spotify-green">Search Results</h3>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-spotify-green"></div>
-                  </div>
-                ) : (
-                  <TrackList
-                    tracks={tracks}
-                    onAddToPlaylist={handleAddToPlaylist}
-                    currentlyPlaying={currentlyPlaying}
-                    onPlayPreview={handlePlayPreview}
-                  />
-                )}
-              </div>
-
-              {/* Current Playlist */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-spotify-green">Your Playlist</h3>
-                  <button
-                    onClick={handleSavePlaylist}
-                    disabled={playlist.length === 0}
-                    className="px-4 py-2 bg-spotify-green text-dark-bg rounded-lg hover:bg-spotify-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save to Spotify
-                  </button>
-                </div>
+            <div className="space-y-6">
+              <SearchFilters filters={filters} onFilterChange={handleFilterChange} />
+              {isLoading ? (
+                <LoadingState />
+              ) : (
                 <TrackList
-                  tracks={playlist}
-                  onAddToPlaylist={() => {}}
+                  tracks={tracks}
+                  onAddToPlaylist={handleAddToPlaylist}
                   currentlyPlaying={currentlyPlaying}
                   onPlayPreview={handlePlayPreview}
                 />
-              </div>
+              )}
+            </div>
+
+            {/* Playlist */}
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-dark-text">Your Playlist</h2>
+              <PlaylistView
+                tracks={playlist}
+                currentlyPlaying={currentlyPlaying}
+                onPlayPreview={handlePlayPreview}
+                onRemoveTrack={handleRemoveTrack}
+                onSavePlaylist={handleSavePlaylist}
+                onUpdatePlaylistName={handleUpdatePlaylistName}
+                playlistName={playlistName}
+              />
             </div>
 
             {/* Web Playback */}
