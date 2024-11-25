@@ -19,36 +19,31 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
     if (date) {
       const currentYear = new Date().getFullYear();
       const newYear = date.getFullYear();
-      const otherYear = name === 'yearStart' ? parseInt(filters.yearEnd || currentYear.toString()) : parseInt(filters.yearStart || currentYear.toString());
+      const startYear = parseInt(filters.yearStart || currentYear.toString());
+      const endYear = parseInt(filters.yearEnd || currentYear.toString());
 
-      // For yearEnd: prevent selecting a year less than current year
-      if (name === 'yearEnd' && newYear < currentYear) {
-        onFilterChange({
-          ...filters,
-          yearEnd: currentYear.toString()
-        });
-        return;
+      // Basic validation
+      if (name === 'yearStart') {
+        // Start year can't be greater than end year
+        if (newYear > endYear) {
+          onFilterChange({
+            ...filters,
+            yearStart: endYear.toString()
+          });
+          return;
+        }
+      } else if (name === 'yearEnd') {
+        // End year can't be less than start year
+        if (newYear < startYear) {
+          onFilterChange({
+            ...filters,
+            yearEnd: startYear.toString()
+          });
+          return;
+        }
       }
 
-      // For yearStart: prevent selecting a year greater than endYear
-      if (name === 'yearStart' && newYear > otherYear) {
-        onFilterChange({
-          ...filters,
-          yearStart: filters.yearEnd || currentYear.toString()
-        });
-        return;
-      }
-
-      // For yearEnd: prevent selecting a year less than startYear
-      if (name === 'yearEnd' && newYear < otherYear) {
-        onFilterChange({
-          ...filters,
-          yearEnd: filters.yearStart || currentYear.toString()
-        });
-        return;
-      }
-
-      // If all validations pass, update the year
+      // If validation passes, update the year
       onFilterChange({
         ...filters,
         [name]: newYear.toString()
@@ -134,7 +129,7 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
                     yearItemNumber={9}
                     className="w-full bg-transparent text-center focus:outline-none text-dark-text text-sm cursor-pointer"
                     popperClassName="year-picker-popper"
-                    popperPlacement="auto"
+                    popperPlacement="bottom-start"
                     portalId="root"
                     shouldCloseOnSelect={true}
                   />
@@ -151,7 +146,7 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
                     yearItemNumber={9}
                     className="w-full bg-transparent text-center focus:outline-none text-dark-text text-sm cursor-pointer"
                     popperClassName="year-picker-popper"
-                    popperPlacement="auto"
+                    popperPlacement="bottom-start"
                     portalId="root"
                     shouldCloseOnSelect={true}
                   />

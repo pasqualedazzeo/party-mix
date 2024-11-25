@@ -57,14 +57,20 @@ function App() {
   useEffect(() => {
     if (token && (filters.artist || filters.genre || filters.yearStart || filters.yearEnd)) {
       const delayDebounceFn = setTimeout(async () => {
-        setIsLoading(true);
+        // Only show loading for text-based searches
+        const shouldShowLoading = filters.artist !== '' || filters.genre !== '';
+        if (shouldShowLoading) {
+          setIsLoading(true);
+        }
         try {
           const searchResults = await searchTracks(filters, token);
           setTracks(searchResults);
         } catch (error) {
           console.error('Error searching tracks:', error);
         }
-        setIsLoading(false);
+        if (shouldShowLoading) {
+          setIsLoading(false);
+        }
       }, 500);
 
       return () => clearTimeout(delayDebounceFn);
