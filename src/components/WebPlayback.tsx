@@ -30,7 +30,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
     const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
-    const progressInterval = useRef<number>();
+    const progressInterval = useRef<NodeJS.Timeout>();
     const scriptRef = useRef<HTMLScriptElement | null>(null);
 
     // Format time in MM:SS
