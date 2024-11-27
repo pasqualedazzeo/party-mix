@@ -1,12 +1,46 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Track } from '../types';
 
+// Constants
+const PLAYER_NAME = 'Party Mix Web Player';
+const SDK_SCRIPT_URL = 'https://sdk.scdn.co/spotify-player.js';
+const REGISTRATION_TIMEOUT = 1000;
+const PROGRESS_UPDATE_INTERVAL = 1000;
+
+// Enums for player events
+enum PlayerEvents {
+    INITIALIZATION_ERROR = 'initialization_error',
+    AUTHENTICATION_ERROR = 'authentication_error',
+    ACCOUNT_ERROR = 'account_error',
+    READY = 'ready',
+    NOT_READY = 'not_ready',
+    PLAYER_STATE_CHANGED = 'player_state_changed'
+}
+
+// Types
+interface PlayerError {
+    message: string;
+}
+
+interface PlayerState {
+    paused: boolean;
+    duration: number;
+    position: number;
+}
+
+interface PlayerDevice {
+    device_id: string;
+}
+
 interface SpotifyPlayer {
-    _options: { getOAuthToken: (cb: (token: string) => void) => void; name: string };
+    _options: { 
+        getOAuthToken: (cb: (token: string) => void) => void; 
+        name: string 
+    };
     connect: () => Promise<boolean>;
     disconnect: () => void;
-    addListener: (eventName: string, callback: (state: any) => void) => void;
-    removeListener: (eventName: string, callback: (state: any) => void) => void;
+    addListener: <T>(eventName: PlayerEvents, callback: (state: T) => void) => void;
+    removeListener: <T>(eventName: PlayerEvents, callback: (state: T) => void) => void;
     togglePlay: () => Promise<void>;
     previousTrack: () => Promise<void>;
     nextTrack: () => Promise<void>;
@@ -20,26 +54,89 @@ interface WebPlaybackProps {
     onTrackChange?: (track: Track) => void;
 }
 
-const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose, recommendedTracks = [], onTrackChange }) => {
+interface PlayerStatus {
+    isActive: boolean;
+    isPlaying: boolean;
+    progress: number;
+    duration: number;
+}
+
+const WebPlayback: React.FC<WebPlaybackProps> = ({ 
+    token, 
+    spotifyTrack, 
+    onClose, 
+    recommendedTracks = [], 
+    onTrackChange 
+}) => {
     const [player, setPlayer] = useState<SpotifyPlayer>();
-    const [is_active, setIsActive] = useState(false);
-    const [is_playing, setIsPlaying] = useState(false);
+    const [status, setStatus] = useState<PlayerStatus>({
+        isActive: false,
+        isPlaying: false,
+        progress: 0,
+        duration: 0
+    });
     const [deviceId, setDeviceId] = useState<string>();
     const [error, setError] = useState<string | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
-    const [progress, setProgress] = useState(0);
-    const [duration, setDuration] = useState(0);
     const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
     const progressInterval = useRef<NodeJS.Timeout>();
     const scriptRef = useRef<HTMLScriptElement | null>(null);
 
-    // Format time in MM:SS
-    const formatTime = (ms: number) => {
+    // Utility functions
+    const formatTime = useCallback((ms: number): string => {
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    };
+    }, []);
+
+    const handleTokenError = useCallback(() => {
+        localStorage.removeItem('spotify_token');
+        window.location.href = '/';
+    }, []);
+
+    const updateProgress = useCallback((playerState: PlayerState) => {
+        if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+        }
+
+        if (!playerState.paused) {
+            progressInterval.current = setInterval(() => {
+                setStatus(prev => ({
+                    ...prev,
+                    progress: Math.min(prev.progress + PROGRESS_UPDATE_INTERVAL, playerState.duration)
+                }));
+            }, PROGRESS_UPDATE_INTERVAL);
+        }
+    }, []);
+
+    // Event handlers
+    const handlePlayerStateChange = useCallback((state: PlayerState | null) => {
+        if (!state) return;
+
+        setStatus(prev => ({
+            ...prev,
+            isActive: true,
+            isPlaying: !state.paused,
+            duration: state.duration,
+            progress: state.position
+        }));
+        setError(null);
+        updateProgress(state);
+    }, [updateProgress]);
+
+    const handlePlayerReady = useCallback(({ device_id }: PlayerDevice) => {
+        console.log('Ready with Device ID', device_id);
+        setDeviceId(device_id);
+        setStatus(prev => ({ ...prev, isActive: true }));
+        setIsInitializing(false);
+    }, []);
+
+    const handlePlayerError = useCallback((error: PlayerError) => {
+        console.error('Player error:', error.message);
+        setError(error.message);
+        setIsInitializing(false);
+    }, []);
 
     useEffect(() => {
         if (!token) {
@@ -47,130 +144,59 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
             return;
         }
 
-        let cleanupCalled = false;
+        const cleanup = { called: false };
         let initializationAttempted = false;
         let registrationTimeout: ReturnType<typeof setTimeout>;
-
-        const handleTokenError = () => {
-            localStorage.removeItem('spotify_token');
-            window.location.href = '/';
-        };
 
         const initializePlayer = () => {
             if (initializationAttempted) return;
             initializationAttempted = true;
 
             const player = new (window as any).Spotify.Player({
-                name: 'Party Mix Web Player',
-                getOAuthToken: (cb: (token: string) => void) => {
-                    cb(token);
-                },
+                name: PLAYER_NAME,
+                getOAuthToken: (cb: (token: string) => void) => cb(token),
             }) as SpotifyPlayer;
 
             // Error handling
-            player.addListener('initialization_error', ({ message }) => {
-                console.error('Failed to initialize:', message);
-                setError('Failed to initialize player: ' + message);
-                setIsInitializing(false);
-            });
-
-            player.addListener('authentication_error', ({ message }) => {
-                console.error('Failed to authenticate:', message);
-                setError('Failed to authenticate: ' + message);
+            player.addListener(PlayerEvents.INITIALIZATION_ERROR, handlePlayerError);
+            player.addListener(PlayerEvents.AUTHENTICATION_ERROR, (error: PlayerError) => {
+                handlePlayerError(error);
                 handleTokenError();
             });
+            player.addListener(PlayerEvents.ACCOUNT_ERROR, handlePlayerError);
 
-            player.addListener('account_error', ({ message }) => {
-                console.error('Failed to validate Spotify account:', message);
-                setError('Premium required: ' + message);
-            });
-
-            // Playback status updates
-            player.addListener('ready', ({ device_id }) => {
-                if (cleanupCalled) return;
-                console.log('Ready with Device ID', device_id);
-                setDeviceId(device_id);
-
-                registrationTimeout = setTimeout(async () => {
-                    try {
-                        const success = await player.connect();
-                        if (success) {
-                            console.log('Successfully connected to Spotify!');
-                            setIsActive(true);
-                            setIsInitializing(false);
-                        } else {
-                            throw new Error('Failed to connect to Spotify');
-                        }
-                    } catch (error) {
-                        console.error('Connection error:', error);
-                        setError('Failed to connect to Spotify');
-                        setIsInitializing(false);
-                    }
-                }, 1000);
-            });
-
-            player.addListener('not_ready', ({ device_id }) => {
-                if (cleanupCalled) return;
+            // Status updates
+            player.addListener(PlayerEvents.READY, handlePlayerReady);
+            player.addListener(PlayerEvents.NOT_READY, ({ device_id }: PlayerDevice) => {
+                if (cleanup.called) return;
                 console.log('Device ID has gone offline', device_id);
-                setIsActive(false);
+                setStatus(prev => ({ ...prev, isActive: false }));
             });
-
-            player.addListener('player_state_changed', state => {
-                if (!state || cleanupCalled) {
-                    return;
-                }
-                setIsActive(true);
-                setIsPlaying(!state.paused);
-                setDuration(state.duration);
-                setProgress(state.position);
-                setError(null);
-
-                // Clear existing interval
-                if (progressInterval.current) {
-                    clearInterval(progressInterval.current);
-                }
-
-                // Start progress tracking if playing
-                if (!state.paused) {
-                    progressInterval.current = setInterval(() => {
-                        setProgress(prev => {
-                            if (prev >= state.duration) {
-                                if (progressInterval.current) {
-                                    clearInterval(progressInterval.current);
-                                }
-                                return 0;
-                            }
-                            return prev + 1000;
-                        });
-                    }, 1000);
-                }
-            });
+            player.addListener(PlayerEvents.PLAYER_STATE_CHANGED, handlePlayerStateChange);
 
             // Connect to the player
-            player.connect().catch(error => {
-                console.error('Failed to connect:', error);
-                setError('Failed to connect to Spotify');
-                setIsInitializing(false);
-            });
+            player.connect()
+                .then(success => {
+                    if (success) {
+                        console.log('Successfully connected to Spotify!');
+                    } else {
+                        throw new Error('Failed to connect to Spotify');
+                    }
+                })
+                .catch(error => {
+                    console.error('Connection error:', error);
+                    setError('Failed to connect to Spotify');
+                    setIsInitializing(false);
+                });
 
             setPlayer(player);
-
-            return () => {
-                cleanupCalled = true;
-                if (progressInterval.current) {
-                    clearInterval(progressInterval.current);
-                }
-                if (registrationTimeout) {
-                    clearTimeout(registrationTimeout);
-                }
-                player.disconnect();
-            };
+            return player;
         };
 
         // Load Spotify SDK script
         if (!window.Spotify && !scriptRef.current) {
             const script = document.createElement('script');
-            script.src = 'https://sdk.scdn.co/spotify-player.js';
+            script.src = SDK_SCRIPT_URL;
             script.async = true;
 
             document.body.appendChild(script);
@@ -184,13 +210,28 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
         }
 
         return () => {
+            cleanup.called = true;
+            if (progressInterval.current) {
+                clearInterval(progressInterval.current);
+            }
+            if (registrationTimeout) {
+                clearTimeout(registrationTimeout);
+            }
+            if (player) {
+                player.removeListener(PlayerEvents.INITIALIZATION_ERROR, handlePlayerError);
+                player.removeListener(PlayerEvents.AUTHENTICATION_ERROR, handlePlayerError);
+                player.removeListener(PlayerEvents.ACCOUNT_ERROR, handlePlayerError);
+                player.removeListener(PlayerEvents.READY, handlePlayerReady);
+                player.removeListener(PlayerEvents.PLAYER_STATE_CHANGED, handlePlayerStateChange);
+                player.disconnect();
+            }
             if (scriptRef.current) {
                 document.body.removeChild(scriptRef.current);
                 scriptRef.current = null;
             }
             window.onSpotifyWebPlaybackSDKReady = () => {};
         };
-    }, [token]);
+    }, [token, handlePlayerError, handlePlayerReady, handlePlayerStateChange, handleTokenError]);
 
     useEffect(() => {
         let isMounted = true;
@@ -200,13 +241,13 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
 
             try {
                 // Ensure we're connected
-                if (!is_active) {
+                if (!status.isActive) {
                     const connected = await player.connect();
                     if (!connected) {
                         throw new Error('Failed to connect player');
                     }
                     // Wait for device registration
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, REGISTRATION_TIMEOUT));
                 }
 
                 // First get the current playback state
@@ -264,7 +305,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
         return () => {
             isMounted = false;
         };
-    }, [deviceId, token, spotifyTrack, player, is_active, isInitializing]);
+    }, [deviceId, token, spotifyTrack, player, isInitializing]);
 
     useEffect(() => {
         if (spotifyTrack && recommendedTracks.length > 0) {
@@ -329,7 +370,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
         );
     }
 
-    if (!is_active) {
+    if (!status.isActive) {
         return (
             <div className="fixed bottom-0 left-0 right-0 bg-dark-surface border-t border-dark-highlight p-4">
                 <div className="flex items-center justify-center gap-2 text-dark-text">
@@ -379,7 +420,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
                                 onClick={() => player?.togglePlay()}
                                 disabled={!player || isInitializing}
                             >
-                                {is_playing ? (
+                                {status.isPlaying ? (
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
@@ -411,14 +452,14 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token, spotifyTrack, onClose,
                         </div>
                     </div>
                     <div className="flex items-center gap-2 px-2">
-                        <span className="text-dark-text/70 text-sm min-w-[40px]">{formatTime(progress)}</span>
+                        <span className="text-dark-text/70 text-sm min-w-[40px]">{formatTime(status.progress)}</span>
                         <div className="flex-1 h-1 bg-dark-highlight rounded-full overflow-hidden">
                             <div 
                                 className="h-full bg-dark-text transition-all duration-1000"
-                                style={{ width: `${(progress / duration) * 100}%` }}
+                                style={{ width: `${(status.progress / status.duration) * 100}%` }}
                             />
                         </div>
-                        <span className="text-dark-text/70 text-sm min-w-[40px]">{formatTime(duration)}</span>
+                        <span className="text-dark-text/70 text-sm min-w-[40px]">{formatTime(status.duration)}</span>
                     </div>
                 </div>
             </div>
