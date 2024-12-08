@@ -7,6 +7,7 @@ export interface Track {
   popularity: number;
   previewUrl: string;
   imageUrl: string;
+  uri: string;
 }
 
 export interface FilterOptions {

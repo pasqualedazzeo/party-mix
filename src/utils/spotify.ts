@@ -137,7 +137,8 @@ export async function searchTracks(filters: any, token: string) {
       duration: msToMinutesAndSeconds(track.duration_ms),
       popularity: track.popularity,
       previewUrl: track.preview_url,
-      imageUrl: track.album.images[0]?.url
+      imageUrl: track.album.images[0]?.url,
+      uri: track.uri
     }));
   } catch (error) {
     console.error('Error searching tracks:', error);

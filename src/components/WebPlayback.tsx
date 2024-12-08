@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Track } from '../types';
 
-// Constants
-const PLAYER_NAME = 'Party Mix Web Player';
-const SDK_SCRIPT_URL = 'https://sdk.scdn.co/spotify-player.js';
-const PROGRESS_UPDATE_INTERVAL = 1000;
-
-// Enums for player events
+// Constants for player events
 enum PlayerEvents {
     INITIALIZATION_ERROR = 'initialization_error',
     AUTHENTICATION_ERROR = 'authentication_error',
@@ -16,19 +11,10 @@ enum PlayerEvents {
     PLAYER_STATE_CHANGED = 'player_state_changed'
 }
 
-// Types
-interface PlayerError {
-    message: string;
-}
-
 interface PlayerState {
     paused: boolean;
     duration: number;
     position: number;
-}
-
-interface PlayerDevice {
-    device_id: string;
 }
 
 interface SpotifyPlayer {
@@ -51,6 +37,8 @@ interface WebPlaybackProps {
     onClose: () => void;
     recommendedTracks?: Track[];
     onTrackChange?: (track: Track) => void;
+    deviceId?: string | null;
+    spotifyPlayer?: SpotifyPlayer | null;
 }
 
 interface PlayerStatus {
@@ -65,21 +53,19 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
     spotifyTrack, 
     onClose, 
     recommendedTracks = [], 
-    onTrackChange 
+    onTrackChange,
+    deviceId: externalDeviceId,
+    spotifyPlayer: externalPlayer
 }) => {
-    const [player, setPlayer] = useState<SpotifyPlayer>();
     const [status, setStatus] = useState<PlayerStatus>({
         isActive: false,
         isPlaying: false,
         progress: 0,
         duration: 0
     });
-    const [deviceId, setDeviceId] = useState<string>();
     const [error, setError] = useState<string | null>(null);
-    const [isInitializing, setIsInitializing] = useState(true);
     const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
     const progressInterval = useRef<NodeJS.Timeout>();
-    const scriptRef = useRef<HTMLScriptElement | null>(null);
 
     // Utility functions
     const formatTime = useCallback((ms: number): string => {
@@ -89,173 +75,67 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }, []);
 
-    const handleTokenError = useCallback(() => {
-        localStorage.removeItem('spotify_token');
-        window.location.href = '/';
-    }, []);
-
-    const updateProgress = useCallback((playerState: PlayerState) => {
-        if (progressInterval.current) {
-            clearInterval(progressInterval.current);
-        }
-
-        if (!playerState.paused) {
-            progressInterval.current = setInterval(() => {
-                setStatus(prev => ({
-
-                    ...prev,
-                    progress: Math.min(prev.progress + PROGRESS_UPDATE_INTERVAL, playerState.duration)
-                }));
-            }, PROGRESS_UPDATE_INTERVAL);
-        }
-    }, []);
-
-    // Event handlers
-    const handlePlayerStateChange = useCallback((state: PlayerState | null) => {
-        if (!state) return;
-
-        setStatus(prev => ({
-            ...prev,
-            isActive: true,
-            isPlaying: !state.paused,
-            duration: state.duration,
-            progress: state.position
-        }));
-        setError(null);
-        updateProgress(state);
-    }, [updateProgress]);
-
-    const handlePlayerReady = useCallback(({ device_id }: PlayerDevice) => {
-        console.log('Ready with Device ID', device_id);
-        setDeviceId(device_id);
-        setStatus(prev => ({ ...prev, isActive: true }));
-        setIsInitializing(false);
-    }, []);
-
-    const handlePlayerError = useCallback((error: PlayerError) => {
-        console.error('Player error:', error.message);
-        setError(error.message);
-        setIsInitializing(false);
-    }, []);
-
+    // Use external player for state changes
     useEffect(() => {
-        if (!token) {
-            setError('No access token available');
-            return;
-        }
+        if (!externalPlayer) return;
 
-        let isInitialized = false;
+        const handlePlayerStateChange = (state: PlayerState | null) => {
+            if (!state) return;
 
-        const initializePlayer = () => {
-            if (isInitialized) return null;
-            isInitialized = true;
+            setStatus(prev => ({
+                ...prev,
+                isActive: true,
+                isPlaying: !state.paused,
+                duration: state.duration,
+                progress: state.position
+            }));
 
-            const player = new (window as any).Spotify.Player({
-                name: PLAYER_NAME,
-                getOAuthToken: (cb: (token: string) => void) => cb(token),
-            }) as SpotifyPlayer;
-
-            // Error handling
-            player.addListener(PlayerEvents.INITIALIZATION_ERROR, handlePlayerError);
-            player.addListener(PlayerEvents.AUTHENTICATION_ERROR, (error: PlayerError) => {
-                handlePlayerError(error);
-                handleTokenError();
-            });
-            player.addListener(PlayerEvents.ACCOUNT_ERROR, handlePlayerError);
-
-            // Status updates
-            player.addListener(PlayerEvents.READY, handlePlayerReady);
-            player.addListener(PlayerEvents.NOT_READY, ({ device_id }: PlayerDevice) => {
-                console.log('Device ID has gone offline', device_id);
-                setStatus(prev => ({ ...prev, isActive: false }));
-            });
-            player.addListener(PlayerEvents.PLAYER_STATE_CHANGED, handlePlayerStateChange);
-
-            // Connect to the player
-            player.connect()
-                .then(success => {
-                    if (success) {
-                        console.log('Successfully connected to Spotify!');
-                    } else {
-                        throw new Error('Failed to connect to Spotify');
-                    }
-                })
-                .catch(error => {
-                    console.error('Connection error:', error);
-                    setError('Failed to connect to Spotify');
-                    setIsInitializing(false);
-                });
-
-            return player;
-        };
-
-        // Load Spotify SDK script if not already loaded
-        if (!window.Spotify && !scriptRef.current) {
-            const script = document.createElement('script');
-            script.src = SDK_SCRIPT_URL;
-            script.async = true;
-
-            document.body.appendChild(script);
-            scriptRef.current = script;
-
-            window.onSpotifyWebPlaybackSDKReady = () => {
-                if (!player) {
-                    const newPlayer = initializePlayer();
-                    if (newPlayer) {
-                        setPlayer(newPlayer);
-                        setIsInitializing(false);
-                    }
+            if (!state.paused) {
+                if (progressInterval.current) {
+                    clearInterval(progressInterval.current);
                 }
-            };
-        } else if (window.Spotify && !player && !isInitializing) {
-            const newPlayer = initializePlayer();
-            if (newPlayer) {
-                setPlayer(newPlayer);
-                setIsInitializing(false);
-            }
-        }
-
-        return () => {
-            if (player) {
-                player.removeListener(PlayerEvents.INITIALIZATION_ERROR, handlePlayerError);
-                player.removeListener(PlayerEvents.AUTHENTICATION_ERROR, handlePlayerError);
-                player.removeListener(PlayerEvents.ACCOUNT_ERROR, handlePlayerError);
-                player.removeListener(PlayerEvents.READY, handlePlayerReady);
-                player.removeListener(PlayerEvents.PLAYER_STATE_CHANGED, handlePlayerStateChange);
-                player.disconnect();
-            }
-            if (scriptRef.current) {
-                document.body.removeChild(scriptRef.current);
-                scriptRef.current = null;
+                progressInterval.current = setInterval(() => {
+                    setStatus(prev => ({
+                        ...prev,
+                        progress: Math.min(prev.progress + 1000, state.duration)
+                    }));
+                }, 1000);
             }
         };
-    }, [token, handlePlayerError, handlePlayerReady, handlePlayerStateChange, handleTokenError, player, isInitializing]);
 
-    // Handle track changes without reinitializing the player
+        externalPlayer.addListener(PlayerEvents.PLAYER_STATE_CHANGED, handlePlayerStateChange);
+        return () => {
+            externalPlayer.removeListener(PlayerEvents.PLAYER_STATE_CHANGED, handlePlayerStateChange);
+            if (progressInterval.current) {
+                clearInterval(progressInterval.current);
+            }
+        };
+    }, [externalPlayer]);
+
+    // Handle track changes
     useEffect(() => {
-        if (!deviceId || !token || !spotifyTrack || !player) return;
+        if (!externalDeviceId || !token || !spotifyTrack) return;
 
         const playTrack = async () => {
             try {
-                await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${externalDeviceId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        uris: [`spotify:track:${spotifyTrack.id}`]
+                        uris: [spotifyTrack.uri]
                     })
                 });
-                setError(null);
             } catch (error) {
-                console.error('Playback error:', error);
-                setError(error instanceof Error ? error.message : 'Failed to start playback');
+                console.error('Error playing track:', error);
+                setError('Failed to play track');
             }
         };
 
         playTrack();
-    }, [deviceId, token, spotifyTrack, player]);
+    }, [externalDeviceId, token, spotifyTrack]);
 
     useEffect(() => {
         if (spotifyTrack && recommendedTracks.length > 0) {
@@ -265,7 +145,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
     }, [spotifyTrack, recommendedTracks]);
 
     const handlePreviousTrack = async () => {
-        if (!player || recommendedTracks.length === 0) return;
+        if (!externalPlayer || recommendedTracks.length === 0) return;
         
         const newIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : recommendedTracks.length - 1;
         const previousTrack = recommendedTracks[newIndex];
@@ -276,7 +156,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
     };
 
     const handleNextTrack = async () => {
-        if (!player || recommendedTracks.length === 0) return;
+        if (!externalPlayer || recommendedTracks.length === 0) return;
         
         const newIndex = currentTrackIndex < recommendedTracks.length - 1 ? currentTrackIndex + 1 : 0;
         const nextTrack = recommendedTracks[newIndex];
@@ -285,17 +165,6 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
             onTrackChange(nextTrack);
         }
     };
-
-    if (isInitializing) {
-        return (
-            <div className="fixed bottom-0 left-0 right-0 bg-dark-surface border-t border-dark-highlight p-4">
-                <div className="flex items-center justify-center gap-2 text-dark-text">
-                    <div className="animate-spin h-5 w-5 border-2 border-dark-text border-t-transparent rounded-full"></div>
-                    <span>Initializing Spotify player...</span>
-                </div>
-            </div>
-        );
-    }
 
     if (error) {
         return (
@@ -359,7 +228,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                             <button 
                                 className="text-dark-text/70 hover:text-dark-text p-2 rounded-full hover:bg-dark-highlight disabled:opacity-50 transition-colors"
                                 onClick={handlePreviousTrack}
-                                disabled={!player || isInitializing || recommendedTracks.length === 0}
+                                disabled={!externalPlayer || recommendedTracks.length === 0}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
@@ -367,8 +236,8 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                             </button>
                             <button 
                                 className="text-dark-text/70 hover:text-dark-text p-2 rounded-full hover:bg-dark-highlight disabled:opacity-50 transition-colors"
-                                onClick={() => player?.togglePlay()}
-                                disabled={!player || isInitializing}
+                                onClick={() => externalPlayer?.togglePlay()}
+                                disabled={!externalPlayer}
                             >
                                 {status.isPlaying ? (
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,7 +253,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                             <button 
                                 className="text-dark-text/70 hover:text-dark-text p-2 rounded-full hover:bg-dark-highlight disabled:opacity-50 transition-colors"
                                 onClick={handleNextTrack}
-                                disabled={!player || isInitializing || recommendedTracks.length === 0}
+                                disabled={!externalPlayer || recommendedTracks.length === 0}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SearchFilters } from './components/SearchFilters';
 import { TrackList } from './components/TrackList';
 import { Header } from './components/Header';
@@ -21,6 +21,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [spotifyPlayer, setSpotifyPlayer] = useState<any>(null);
   const [filters, setFilters] = useState<FilterOptions>({
     artist: '',
     genre: '',
@@ -28,6 +30,42 @@ function App() {
     yearEnd: ''
   });
   const [playlistName, setPlaylistName] = useState(`Party Mix ${new Date().toLocaleDateString()}`);
+  const playerInitialized = useRef(false);
+
+  // Separate effect for player initialization
+  useEffect(() => {
+    if (!token || playerInitialized.current) return;
+
+    const initializePlayer = () => {
+      const script = document.createElement('script');
+      script.src = 'https://sdk.scdn.co/spotify-player.js';
+      script.async = true;
+
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        const player = new window.Spotify.Player({
+          name: 'Party Mix Web Player',
+          getOAuthToken: cb => cb(token),
+        });
+
+        player.addListener('ready', ({ device_id }) => {
+          console.log('Player ready with Device ID', device_id);
+          setDeviceId(device_id);
+        });
+
+        player.connect().then(success => {
+          if (success) {
+            console.log('Successfully connected to Spotify!');
+            setSpotifyPlayer(player);
+            playerInitialized.current = true;
+          }
+        });
+      };
+
+      document.body.appendChild(script);
+    };
+
+    initializePlayer();
+  }, [token]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -141,6 +179,11 @@ function App() {
       yearStart: '',
       yearEnd: ''
     });
+  };
+
+  const handleTrackChange = (track: Track) => {
+    setCurrentTrack(track);
+    setCurrentlyPlaying(track.id);
   };
 
   if (isAuthenticating) {
@@ -282,10 +325,9 @@ function App() {
                     spotifyTrack={currentTrack}
                     onClose={() => setCurrentTrack(null)}
                     recommendedTracks={tracks}
-                    onTrackChange={(track) => {
-                      setCurrentTrack(track);
-                      setCurrentlyPlaying(track.id);
-                    }}
+                    onTrackChange={handleTrackChange}
+                    deviceId={deviceId}
+                    spotifyPlayer={spotifyPlayer}
                   />
                 </div>
               </div>
