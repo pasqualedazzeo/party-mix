@@ -106,7 +106,7 @@ export function PlaylistView({
                     <button
                       onClick={() => onPlayPreview(track.id)}
                       className="text-spotify-green hover:opacity-80 transition-opacity p-1"
-                      title="Play preview"
+                      title="Play"
                     >
                       {currentlyPlaying === track.id ? (
                         <Pause className="w-4 h-4" />

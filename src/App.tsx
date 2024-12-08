@@ -125,15 +125,38 @@ function App() {
     }
   };
 
-  const handlePlayPreview = (trackId: string) => {
+  const handlePlayPreview = async (trackId: string) => {
     const track = [...tracks, ...playlist].find(t => t.id === trackId);
-    if (!track) return;
+    if (!track || !spotifyPlayer || !deviceId || !token) return;
 
     if (currentlyPlaying === trackId) {
+      // Stop the current track
       setCurrentlyPlaying(null);
+      await spotifyPlayer.togglePlay();
     } else {
-      setCurrentlyPlaying(trackId);
-      setCurrentTrack(track);
+      // If it's the same track that's in the player but paused, just resume
+      if (currentTrack?.id === track.id) {
+        setCurrentlyPlaying(trackId);
+        await spotifyPlayer.togglePlay();
+      } else {
+        // Play a new track
+        setCurrentlyPlaying(trackId);
+        setCurrentTrack(track);
+        try {
+          await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              uris: [track.uri]
+            })
+          });
+        } catch (error) {
+          console.error('Error playing track:', error);
+        }
+      }
     }
   };
 
@@ -184,6 +207,11 @@ function App() {
   const handleTrackChange = (track: Track) => {
     setCurrentTrack(track);
     setCurrentlyPlaying(track.id);
+  };
+
+  const handlePlayStateChange = (isPlaying: boolean) => {
+    if (!currentTrack) return;
+    setCurrentlyPlaying(isPlaying ? currentTrack.id : null);
   };
 
   if (isAuthenticating) {
@@ -317,17 +345,18 @@ function App() {
             </div>
 
             {/* Web Playback */}
-            {currentTrack && (
+            {currentTrack && deviceId && (
               <div className="fixed bottom-0 left-0 right-0 bg-dark-surface border-t border-dark-highlight p-4">
                 <div className="max-w-7xl mx-auto">
                   <WebPlayback
                     token={token}
                     spotifyTrack={currentTrack}
                     onClose={() => setCurrentTrack(null)}
-                    recommendedTracks={tracks}
+                    recommendedTracks={[...tracks, ...playlist]}
                     onTrackChange={handleTrackChange}
                     deviceId={deviceId}
                     spotifyPlayer={spotifyPlayer}
+                    onPlayStateChange={handlePlayStateChange}
                   />
                 </div>
               </div>

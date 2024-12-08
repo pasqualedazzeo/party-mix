@@ -41,6 +41,7 @@ interface WebPlaybackProps {
     onTrackChange?: (track: Track) => void;
     deviceId?: string | null;
     spotifyPlayer?: SpotifyPlayer | null;
+    onPlayStateChange?: (isPlaying: boolean) => void;
 }
 
 interface PlayerStatus {
@@ -57,7 +58,8 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
     recommendedTracks = [], 
     onTrackChange,
     deviceId: externalDeviceId,
-    spotifyPlayer: externalPlayer
+    spotifyPlayer: externalPlayer,
+    onPlayStateChange
 }) => {
     const [status, setStatus] = useState<PlayerStatus>({
         isActive: false,
@@ -84,13 +86,19 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         const handlePlayerStateChange = (state: PlayerState | null) => {
             if (!state) return;
 
+            const isPlaying = !state.paused;
             setStatus(prev => ({
                 ...prev,
                 isActive: true,
-                isPlaying: !state.paused,
+                isPlaying,
                 duration: state.duration,
                 progress: state.position
             }));
+
+            // Notify parent of play state change
+            if (onPlayStateChange) {
+                onPlayStateChange(isPlaying);
+            }
 
             if (!state.paused) {
                 if (progressInterval.current) {
@@ -102,6 +110,11 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                         progress: Math.min(prev.progress + 1000, state.duration)
                     }));
                 }, 1000);
+            } else {
+                if (progressInterval.current) {
+                    clearInterval(progressInterval.current);
+                    progressInterval.current = undefined;
+                }
             }
         };
 
@@ -112,7 +125,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                 clearInterval(progressInterval.current);
             }
         };
-    }, [externalPlayer]);
+    }, [externalPlayer, onPlayStateChange]);
 
     // Handle track changes
     useEffect(() => {
@@ -152,7 +165,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         }
     }, [spotifyTrack, recommendedTracks]);
 
-    const handlePreviousTrack = async () => {
+    const handlePreviousTrack = useCallback(async () => {
         if (!externalPlayer || recommendedTracks.length === 0) return;
         
         const newIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : recommendedTracks.length - 1;
@@ -160,8 +173,9 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         
         if (previousTrack && onTrackChange) {
             onTrackChange(previousTrack);
+            setCurrentTrackIndex(newIndex);
         }
-    };
+    }, [currentTrackIndex, recommendedTracks, onTrackChange, externalPlayer]);
 
     const handleNextTrack = useCallback(async () => {
         if (!externalPlayer || recommendedTracks.length === 0) return;
@@ -169,10 +183,10 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         const newIndex = currentTrackIndex < recommendedTracks.length - 1 ? currentTrackIndex + 1 : 0;
         const nextTrack = recommendedTracks[newIndex];
         
-        if (onTrackChange) {
+        if (nextTrack && onTrackChange) {
             onTrackChange(nextTrack);
+            setCurrentTrackIndex(newIndex);
         }
-        setCurrentTrackIndex(newIndex);
     }, [currentTrackIndex, recommendedTracks, onTrackChange, externalPlayer]);
 
     const handleSeek = useCallback(async (event: React.MouseEvent<HTMLDivElement>) => {
@@ -203,13 +217,14 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
 
     // Sync player state periodically and handle song end
     useEffect(() => {
-        if (!externalPlayer || !status.isPlaying) return;
+        if (!externalPlayer) return;
 
         const syncInterval = setInterval(async () => {
             const state = await externalPlayer.getCurrentState();
             if (state) {
-                // Check if the song has ended (position is at or very close to duration)
-                if (state.position >= state.duration - 1000 && state.duration > 0) {
+                const isNearEnd = state.position >= state.duration - 1000 && state.duration > 0;
+                
+                if (isNearEnd && !state.paused) {
                     handleNextTrack();
                 } else {
                     setStatus(prev => ({
@@ -223,7 +238,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         }, 1000);
 
         return () => clearInterval(syncInterval);
-    }, [externalPlayer, status.isPlaying, handleNextTrack]);
+    }, [externalPlayer, handleNextTrack]);
 
     if (error) {
         return (
