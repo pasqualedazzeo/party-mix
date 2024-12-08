@@ -4,7 +4,6 @@ import type { Track } from '../types';
 // Constants
 const PLAYER_NAME = 'Party Mix Web Player';
 const SDK_SCRIPT_URL = 'https://sdk.scdn.co/spotify-player.js';
-const REGISTRATION_TIMEOUT = 1000;
 const PROGRESS_UPDATE_INTERVAL = 1000;
 
 // Enums for player events
@@ -103,6 +102,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         if (!playerState.paused) {
             progressInterval.current = setInterval(() => {
                 setStatus(prev => ({
+
                     ...prev,
                     progress: Math.min(prev.progress + PROGRESS_UPDATE_INTERVAL, playerState.duration)
                 }));
@@ -144,14 +144,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
             return;
         }
 
-        const cleanup = { called: false };
-        let initializationAttempted = false;
-        let registrationTimeout: ReturnType<typeof setTimeout>;
-
         const initializePlayer = () => {
-            if (initializationAttempted) return;
-            initializationAttempted = true;
-
             const player = new (window as any).Spotify.Player({
                 name: PLAYER_NAME,
                 getOAuthToken: (cb: (token: string) => void) => cb(token),
@@ -168,7 +161,6 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
             // Status updates
             player.addListener(PlayerEvents.READY, handlePlayerReady);
             player.addListener(PlayerEvents.NOT_READY, ({ device_id }: PlayerDevice) => {
-                if (cleanup.called) return;
                 console.log('Device ID has gone offline', device_id);
                 setStatus(prev => ({ ...prev, isActive: false }));
             });
@@ -189,11 +181,10 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                     setIsInitializing(false);
                 });
 
-            setPlayer(player);
             return player;
         };
 
-        // Load Spotify SDK script
+        // Load Spotify SDK script if not already loaded
         if (!window.Spotify && !scriptRef.current) {
             const script = document.createElement('script');
             script.src = SDK_SCRIPT_URL;
@@ -203,20 +194,17 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
             scriptRef.current = script;
 
             window.onSpotifyWebPlaybackSDKReady = () => {
-                initializePlayer();
+                const newPlayer = initializePlayer();
+                setPlayer(newPlayer);
+                setIsInitializing(false);
             };
-        } else if (window.Spotify) {
-            initializePlayer();
+        } else if (window.Spotify && !player && !isInitializing) {
+            const newPlayer = initializePlayer();
+            setPlayer(newPlayer);
+            setIsInitializing(false);
         }
 
         return () => {
-            cleanup.called = true;
-            if (progressInterval.current) {
-                clearInterval(progressInterval.current);
-            }
-            if (registrationTimeout) {
-                clearTimeout(registrationTimeout);
-            }
             if (player) {
                 player.removeListener(PlayerEvents.INITIALIZATION_ERROR, handlePlayerError);
                 player.removeListener(PlayerEvents.AUTHENTICATION_ERROR, handlePlayerError);
@@ -229,41 +217,16 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                 document.body.removeChild(scriptRef.current);
                 scriptRef.current = null;
             }
-            window.onSpotifyWebPlaybackSDKReady = () => {};
         };
-    }, [token, handlePlayerError, handlePlayerReady, handlePlayerStateChange, handleTokenError]);
+    }, [token, handlePlayerError, handlePlayerReady, handlePlayerStateChange, handleTokenError, player, isInitializing]);
 
+    // Handle track changes without reinitializing the player
     useEffect(() => {
-        let isMounted = true;
+        if (!deviceId || !token || !spotifyTrack || !player) return;
 
-        const startPlayback = async () => {
-            if (!deviceId || !token || !spotifyTrack || !player) return;
-
+        const playTrack = async () => {
             try {
-                // Ensure we're connected
-                if (!status.isActive) {
-                    const connected = await player.connect();
-                    if (!connected) {
-                        throw new Error('Failed to connect player');
-                    }
-                    // Wait for device registration
-                    await new Promise(resolve => setTimeout(resolve, REGISTRATION_TIMEOUT));
-                }
-
-                // First get the current playback state
-                const stateResponse = await fetch('https://api.spotify.com/v1/me/player', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (stateResponse.status === 401) {
-                    setError('Token expired. Please refresh the page.');
-                    return;
-                }
-
-                // Then start playback
-                const playResponse = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -273,39 +236,15 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                         uris: [`spotify:track:${spotifyTrack.id}`]
                     })
                 });
-
-                if (!isMounted) return;
-
-                if (playResponse.status === 401) {
-                    setError('Token expired. Please refresh the page.');
-                    return;
-                }
-
-                if (playResponse.status === 404) {
-                    throw new Error('Device not found. Please try refreshing the page.');
-                }
-
-                if (!playResponse.ok) {
-                    const errorData = await playResponse.json().catch(() => ({}));
-                    throw new Error(errorData.error?.message || 'Failed to start playback');
-                }
-
                 setError(null);
             } catch (error) {
-                if (!isMounted) return;
                 console.error('Playback error:', error);
                 setError(error instanceof Error ? error.message : 'Failed to start playback');
             }
         };
 
-        if (!isInitializing && deviceId && spotifyTrack) {
-            startPlayback();
-        }
-
-        return () => {
-            isMounted = false;
-        };
-    }, [deviceId, token, spotifyTrack, player, isInitializing]);
+        playTrack();
+    }, [deviceId, token, spotifyTrack, player]);
 
     useEffect(() => {
         if (spotifyTrack && recommendedTracks.length > 0) {

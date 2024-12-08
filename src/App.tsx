@@ -93,16 +93,9 @@ function App() {
 
     if (currentlyPlaying === trackId) {
       setCurrentlyPlaying(null);
-      setCurrentTrack(null);
     } else {
-      // Force iframe reload by recreating it
-      setCurrentTrack(null);
-      setCurrentlyPlaying(null);
-      
-      requestAnimationFrame(() => {
-        setCurrentTrack(track);
-        setCurrentlyPlaying(trackId);
-      });
+      setCurrentlyPlaying(trackId);
+      setCurrentTrack(track);
     }
   };
 
