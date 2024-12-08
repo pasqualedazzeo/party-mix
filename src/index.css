@@ -180,6 +180,29 @@ html select[name="yearEnd"] option {
   @apply text-white text-base font-medium py-3 border-b border-dark-highlight !important;
 }
 
+.react-datepicker__navigation {
+  top: 8px !important;
+}
+
+.react-datepicker__navigation--previous {
+  left: 7px !important;
+}
+
+.react-datepicker__navigation--next {
+  right: 7px !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-width: 2px 2px 0 0 !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  height: 9px !important;
+  width: 9px !important;
+}
+
+.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
 .react-datepicker__year {
   @apply m-0 !important;
 }
