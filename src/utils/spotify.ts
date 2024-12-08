@@ -15,9 +15,27 @@ const SCOPES = [
   'user-read-currently-playing'
 ].join(' ');
 
+// Logging utility to maintain consistent format
+const logSpotify = (message: string, data?: any) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[Spotify ${timestamp}] ${message}`, data || '');
+};
+
+// Check environment variables on module initialization
+if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+  logSpotify('Missing required environment variables:', {
+    hasClientId: !!CLIENT_ID,
+    hasClientSecret: !!CLIENT_SECRET,
+    hasRedirectUri: !!REDIRECT_URI
+  });
+}
+
+logSpotify('Initialized with redirect URI', { redirectUri: REDIRECT_URI });
+
 export const loginUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(SCOPES)}`;
 
 async function getTokenFromCode(code: string): Promise<string> {
+  logSpotify('Attempting to exchange code for token');
   const params = new URLSearchParams();
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
@@ -26,6 +44,7 @@ async function getTokenFromCode(code: string): Promise<string> {
   params.append('client_secret', CLIENT_SECRET);
 
   try {
+    logSpotify('Making token exchange request');
     const response = await fetch(TOKEN_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -36,53 +55,59 @@ async function getTokenFromCode(code: string): Promise<string> {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Token exchange failed:', errorData);
+      logSpotify('Token exchange failed', { status: response.status, error: errorData });
       throw new Error(`Failed to get access token: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    logSpotify('Successfully obtained access token');
     return data.access_token;
   } catch (error) {
-    console.error('Token exchange error:', error);
+    logSpotify('Token exchange error', error);
     throw error;
   }
 }
 
 export async function getAccessToken(): Promise<string | null> {
+  logSpotify('Checking for existing token');
   const storedToken = localStorage.getItem('spotify_token');
   if (storedToken) {
+    logSpotify('Found existing token');
     return storedToken;
   }
 
+  logSpotify('No existing token found, checking URL parameters');
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('code');
   const error = urlParams.get('error');
 
   if (error) {
-    console.error('Authorization error:', error);
+    logSpotify('Authorization error from Spotify', error);
     return null;
   }
 
   if (code) {
+    logSpotify('Found authorization code, exchanging for token');
     try {
       const token = await getTokenFromCode(code);
       if (token) {
+        logSpotify('Successfully obtained and stored new token');
         localStorage.setItem('spotify_token', token);
-        // Clean up the URL
         window.history.replaceState({}, document.title, '/');
         return token;
       }
     } catch (error) {
-      console.error('Error getting token:', error);
-      // Clear any existing token if exchange fails
+      logSpotify('Failed to exchange code for token', error);
       localStorage.removeItem('spotify_token');
     }
   }
 
+  logSpotify('No valid token or authorization code found');
   return null;
 }
 
 export async function searchTracks(filters: any, token: string) {
+  logSpotify('Searching tracks with filters', filters);
   try {
     let searchQuery = '';
 
@@ -106,6 +131,7 @@ export async function searchTracks(filters: any, token: string) {
       return [];
     }
 
+    logSpotify('Built search query', { searchQuery });
     const params = new URLSearchParams({
       q: searchQuery.trim(),
       type: 'track',
@@ -120,15 +146,12 @@ export async function searchTracks(filters: any, token: string) {
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('spotify_token');
-        window.location.href = '/';
-        return [];
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
+      logSpotify('Search request failed', { status: response.status });
+      throw new Error('Search request failed');
     }
 
     const data = await response.json();
+    logSpotify('Search completed successfully', { trackCount: data.tracks.items.length });
     return data.tracks.items.map((track: any) => ({
       id: track.id,
       title: track.name,
@@ -141,12 +164,13 @@ export async function searchTracks(filters: any, token: string) {
       uri: track.uri
     }));
   } catch (error) {
-    console.error('Error searching tracks:', error);
-    return [];
+    logSpotify('Error during track search', error);
+    throw error;
   }
 }
 
 export async function createPlaylist(token: string, userId: string, name: string, tracks: string[]) {
+  logSpotify('Creating playlist with name', { name });
   try {
     const playlist = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
       method: 'POST',
@@ -171,6 +195,7 @@ export async function createPlaylist(token: string, userId: string, name: string
       return res.json();
     });
 
+    logSpotify('Created playlist with id', { id: playlist.id });
     await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
       method: 'POST',
       headers: {
@@ -185,14 +210,16 @@ export async function createPlaylist(token: string, userId: string, name: string
       return res.json();
     });
 
+    logSpotify('Added tracks to playlist');
     return playlist;
   } catch (error) {
-    console.error('Error creating playlist:', error);
+    logSpotify('Error creating playlist', error);
     throw error;
   }
 }
 
 export async function getCurrentUser(token: string) {
+  logSpotify('Getting current user');
   try {
     const response = await fetch('https://api.spotify.com/v1/me', {
       headers: {
@@ -210,9 +237,11 @@ export async function getCurrentUser(token: string) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    logSpotify('Got current user', { id: data.id });
+    return data;
   } catch (error) {
-    console.error('Error getting user:', error);
+    logSpotify('Error getting user', error);
     throw error;
   }
 }
