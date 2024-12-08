@@ -29,6 +29,8 @@ interface SpotifyPlayer {
     togglePlay: () => Promise<void>;
     previousTrack: () => Promise<void>;
     nextTrack: () => Promise<void>;
+    getCurrentState: () => Promise<PlayerState | null>;
+    seek: (position_ms: number) => Promise<void>;
 }
 
 interface WebPlaybackProps {
@@ -141,6 +143,12 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         if (spotifyTrack && recommendedTracks.length > 0) {
             const index = recommendedTracks.findIndex(track => track.id === spotifyTrack.id);
             setCurrentTrackIndex(index);
+            // Reset player status when track changes
+            setStatus(prev => ({
+                ...prev,
+                progress: 0,
+                duration: 0
+            }));
         }
     }, [spotifyTrack, recommendedTracks]);
 
@@ -155,16 +163,67 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
         }
     };
 
-    const handleNextTrack = async () => {
+    const handleNextTrack = useCallback(async () => {
         if (!externalPlayer || recommendedTracks.length === 0) return;
         
         const newIndex = currentTrackIndex < recommendedTracks.length - 1 ? currentTrackIndex + 1 : 0;
         const nextTrack = recommendedTracks[newIndex];
         
-        if (nextTrack && onTrackChange) {
+        if (onTrackChange) {
             onTrackChange(nextTrack);
         }
-    };
+        setCurrentTrackIndex(newIndex);
+    }, [currentTrackIndex, recommendedTracks, onTrackChange, externalPlayer]);
+
+    const handleSeek = useCallback(async (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!externalPlayer || !status.duration) return;
+
+        const progressBar = event.currentTarget;
+        const rect = progressBar.getBoundingClientRect();
+        const clickPosition = event.clientX - rect.left;
+        const percentage = clickPosition / rect.width;
+        const position = Math.floor(status.duration * percentage);
+
+        try {
+            // If seeking to end of track (within last second), play next track
+            if (position >= status.duration - 1000) {
+                handleNextTrack();
+                return;
+            }
+
+            await externalPlayer.seek(position);
+            setStatus(prev => ({
+                ...prev,
+                progress: position
+            }));
+        } catch (error) {
+            console.error('Error seeking:', error);
+        }
+    }, [externalPlayer, status.duration, handleNextTrack]);
+
+    // Sync player state periodically and handle song end
+    useEffect(() => {
+        if (!externalPlayer || !status.isPlaying) return;
+
+        const syncInterval = setInterval(async () => {
+            const state = await externalPlayer.getCurrentState();
+            if (state) {
+                // Check if the song has ended (position is at or very close to duration)
+                if (state.position >= state.duration - 1000 && state.duration > 0) {
+                    handleNextTrack();
+                } else {
+                    setStatus(prev => ({
+                        ...prev,
+                        progress: state.position,
+                        duration: state.duration,
+                        isPlaying: !state.paused
+                    }));
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(syncInterval);
+    }, [externalPlayer, status.isPlaying, handleNextTrack]);
 
     if (error) {
         return (
@@ -272,10 +331,15 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
                     </div>
                     <div className="flex items-center gap-2 px-2">
                         <span className="text-dark-text/70 text-sm min-w-[40px]">{formatTime(status.progress)}</span>
-                        <div className="flex-1 h-1 bg-dark-highlight rounded-full overflow-hidden">
+                        <div 
+                            className="progress-bar flex-1 h-1 bg-dark-highlight rounded-full overflow-hidden cursor-pointer" 
+                            onClick={handleSeek}
+                        >
                             <div 
                                 className="h-full bg-dark-text transition-all duration-1000"
-                                style={{ width: `${(status.progress / status.duration) * 100}%` }}
+                                style={{ 
+                                    width: `${(status.progress / status.duration) * 100}%`
+                                }} 
                             />
                         </div>
                         <span className="text-dark-text/70 text-sm min-w-[40px]">{formatTime(status.duration)}</span>
