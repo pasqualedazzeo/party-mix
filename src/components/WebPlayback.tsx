@@ -69,7 +69,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
     });
     const [error, setError] = useState<string | null>(null);
     const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
-    const progressInterval = useRef<NodeJS.Timeout>();
+    const progressInterval = useRef<ReturnType<typeof setTimeout>>();
 
     // Utility functions
     const formatTime = useCallback((ms: number): string => {
