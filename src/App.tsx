@@ -17,15 +17,27 @@ function RedirectHandler() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Handle the Spotify redirect
-    const urlParams = new URLSearchParams(location.search);
-    const code = urlParams.get('code');
-    if (code) {
-      // Store the code or handle authentication
-      localStorage.setItem('spotifyAuthCode', code);
-      navigate('/'); // Redirect to home page
-    }
-  }, [navigate, location]);
+    (async () => {
+      const urlParams = new URLSearchParams(location.search);
+      const code = urlParams.get('code');
+      if (code) {
+        // Directly get the token here
+        try {
+          const accessToken = await getAccessToken(); // Make sure getAccessToken uses code from URL or localStorage
+          if (accessToken) {
+            localStorage.setItem('spotify_token', accessToken);
+            const user = await getCurrentUser(accessToken);
+            localStorage.setItem('spotify_user_id', user.id);
+            localStorage.setItem('spotify_user_email', user.email);
+          }
+        } catch (error) {
+          console.error('Error exchanging code for token:', error);
+        }
+      }
+      // Navigate home after done
+      navigate('/');
+    })();
+  }, [location, navigate]);
 
   return null;
 }
@@ -88,28 +100,26 @@ function App() {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      
-      if (code) {
+      const storedToken = localStorage.getItem('spotify_token');
+      if (storedToken) {
         setIsAuthenticating(true);
         try {
-          const accessToken = await getAccessToken();
-          if (accessToken) {
-            setToken(accessToken);
-            const user = await getCurrentUser(accessToken);
-            setUserId(user.id);
-            setUserEmail(user.email);
-          }
+          const user = await getCurrentUser(storedToken);
+          setToken(storedToken);
+          setUserId(user.id);
+          setUserEmail(user.email);
         } catch (error) {
-          console.error('Authentication error:', error);
+          console.error('Error fetching user info:', error);
+          localStorage.removeItem('spotify_token');
         } finally {
           setIsAuthenticating(false);
         }
       }
+      // If no token, do nothing. User stays unauthenticated.
     };
     initializeAuth();
   }, []);
+  
 
   useEffect(() => {
     if (token && (filters.artist || filters.genre || filters.yearStart || filters.yearEnd)) {
@@ -397,3 +407,5 @@ function App() {
 }
 
 export default App;
+
+

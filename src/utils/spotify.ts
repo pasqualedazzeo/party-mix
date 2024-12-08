@@ -34,7 +34,7 @@ logSpotify('Initialized with redirect URI', { redirectUri: REDIRECT_URI });
 
 export const loginUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(SCOPES)}`;
 
-async function getTokenFromCode(code: string): Promise<string> {
+export async function getTokenFromCode(code: string): Promise<string> {
   logSpotify('Attempting to exchange code for token');
   const params = new URLSearchParams();
   params.append('grant_type', 'authorization_code');
