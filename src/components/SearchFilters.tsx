@@ -51,13 +51,14 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
     }
   };
 
-  // Set initial years to 2024 on component mount
+  // Set initial years on component mount
   useEffect(() => {
     if (!filters.yearStart && !filters.yearEnd) {
+      const currentYear = new Date().getFullYear();
       onFilterChange({
         ...filters,
-        yearStart: '2024',
-        yearEnd: '2024'
+        yearStart: (currentYear - 10).toString(), // Default to 10 years ago
+        yearEnd: currentYear.toString()
       });
     }
   }, []);
@@ -114,43 +115,41 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
 
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-spotify-green to-green-400 rounded-lg opacity-50 group-hover:opacity-100 blur transition duration-300"></div>
-          <div className="relative bg-dark-bg border border-dark-highlight rounded-lg h-12 overflow-hidden">
-            <div className="flex items-center h-full">
-              <Calendar className="w-5 h-5 text-spotify-green opacity-70 group-hover:opacity-100 transition ml-4" />
-              <div className="flex items-center gap-4 px-4 w-full">
-                <div className="relative flex-1">
-                  <DatePicker
-                    selected={getDateFromYear(filters.yearStart)}
-                    onChange={(date) => handleYearChange(date, 'yearStart')}
-                    showYearPicker
-                    dateFormat="yyyy"
-                    minDate={new Date('1980-01-01')}
-                    maxDate={new Date('2024-12-31')}
-                    yearItemNumber={9}
-                    className="w-full bg-transparent text-center focus:outline-none text-dark-text text-sm cursor-pointer"
-                    popperClassName="year-picker-popper"
-                    popperPlacement="bottom-start"
-                    portalId="root"
-                    shouldCloseOnSelect={true}
-                  />
-                </div>
-                <span className="text-dark-text/50 text-sm">-</span>
-                <div className="relative flex-1">
-                  <DatePicker
-                    selected={getDateFromYear(filters.yearEnd)}
-                    onChange={(date) => handleYearChange(date, 'yearEnd')}
-                    showYearPicker
-                    dateFormat="yyyy"
-                    minDate={new Date('1980-01-01')}
-                    maxDate={new Date('2024-12-31')}
-                    yearItemNumber={9}
-                    className="w-full bg-transparent text-center focus:outline-none text-dark-text text-sm cursor-pointer"
-                    popperClassName="year-picker-popper"
-                    popperPlacement="bottom-start"
-                    portalId="root"
-                    shouldCloseOnSelect={true}
-                  />
-                </div>
+          <div className="relative flex items-center bg-dark-bg border border-dark-highlight rounded-lg h-12 overflow-visible">
+            <Calendar className="w-5 h-5 text-spotify-green opacity-70 group-hover:opacity-100 transition ml-4" />
+            <div className="flex items-center gap-4 px-4 w-full">
+              <div className="relative flex-1">
+                <DatePicker
+                  selected={getDateFromYear(filters.yearStart)}
+                  onChange={(date) => handleYearChange(date, 'yearStart')}
+                  dateFormat="yyyy"
+                  showYearPicker
+                  yearItemNumber={16}
+                  minDate={new Date(1900, 0, 1)}
+                  maxDate={new Date()}
+                  className="w-full px-4 py-2 bg-transparent focus:outline-none text-dark-text text-sm text-center cursor-pointer"
+                  popperClassName="year-picker-popper"
+                  popperPlacement="bottom-start"
+                  shouldCloseOnSelect={true}
+                  showPopperArrow={false}
+                />
+              </div>
+              <span className="text-dark-text/50">-</span>
+              <div className="relative flex-1">
+                <DatePicker
+                  selected={getDateFromYear(filters.yearEnd)}
+                  onChange={(date) => handleYearChange(date, 'yearEnd')}
+                  dateFormat="yyyy"
+                  showYearPicker
+                  yearItemNumber={16}
+                  minDate={getDateFromYear(filters.yearStart)}
+                  maxDate={new Date()}
+                  className="w-full px-4 py-2 bg-transparent focus:outline-none text-dark-text text-sm text-center cursor-pointer"
+                  popperClassName="year-picker-popper"
+                  popperPlacement="bottom-start"
+                  shouldCloseOnSelect={true}
+                  showPopperArrow={false}
+                />
               </div>
             </div>
           </div>

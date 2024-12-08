@@ -227,34 +227,50 @@ function App() {
           </div>
         ) : (
           // Dashboard Content
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Search Section */}
-            <div className="space-y-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Search Filters */}
+            <div className="mb-8">
               <SearchFilters filters={filters} onFilterChange={handleFilterChange} />
-              {isLoading ? (
-                <LoadingState />
-              ) : (
-                <TrackList
-                  tracks={tracks}
-                  onAddToPlaylist={handleAddToPlaylist}
-                  currentlyPlaying={currentlyPlaying}
-                  onPlayPreview={handlePlayPreview}
-                />
-              )}
             </div>
 
-            {/* Playlist */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-dark-text">Your Playlist</h2>
-              <PlaylistView
-                tracks={playlist}
-                currentlyPlaying={currentlyPlaying}
-                onPlayPreview={handlePlayPreview}
-                onRemoveTrack={handleRemoveTrack}
-                onSavePlaylist={handleSavePlaylist}
-                onUpdatePlaylistName={handleUpdatePlaylistName}
-                playlistName={playlistName}
-              />
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Suggested Tracks Section */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+                    Suggested Tracks
+                  </h2>
+                </div>
+                {isLoading ? (
+                  <LoadingState />
+                ) : (
+                  <TrackList
+                    tracks={tracks}
+                    onAddToPlaylist={handleAddToPlaylist}
+                    currentlyPlaying={currentlyPlaying}
+                    onPlayPreview={handlePlayPreview}
+                  />
+                )}
+              </div>
+
+              {/* Playlist Section */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+                    Your Playlist
+                  </h2>
+                </div>
+                <PlaylistView
+                  tracks={playlist}
+                  currentlyPlaying={currentlyPlaying}
+                  onPlayPreview={handlePlayPreview}
+                  onRemoveTrack={handleRemoveTrack}
+                  onSavePlaylist={handleSavePlaylist}
+                  onUpdatePlaylistName={handleUpdatePlaylistName}
+                  playlistName={playlistName}
+                />
+              </div>
             </div>
 
             {/* Web Playback */}

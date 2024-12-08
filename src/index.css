@@ -168,100 +168,70 @@ html select[name="yearEnd"] option {
 
 /* DatePicker Custom Styles */
 .react-datepicker {
-  @apply bg-dark-bg border border-dark-highlight rounded-lg shadow-xl font-sans !important;
-  color: #ffffff;
-  font-size: 0.9rem;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  @apply bg-dark-bg border border-dark-highlight rounded-lg shadow-xl !important;
 }
 
 .react-datepicker__header {
-  @apply bg-spotify-green/10 rounded-t-lg !important;
-  padding: 0.7em 0;
-  border-bottom: 1px solid rgba(29, 185, 84, 0.2);
+  @apply bg-dark-bg border-dark-highlight !important;
+  padding-top: 0 !important;
 }
 
-.react-datepicker__current-month,
-.react-datepicker-year-header,
-.react-datepicker__header-year-dropdown-toggle {
-  color: white !important;
-  font-weight: 600 !important;
-}
-
-/* This is the specific class for the year range text */
-.react-datepicker__year-read-view--down-arrow,
-.react-datepicker__year-read-view--selected-year {
-  color: white !important;
-  font-weight: 600 !important;
-}
-
-.react-datepicker__navigation {
-  @apply top-3 !important;
-  z-index: 1;
-}
-
-.react-datepicker__navigation-icon::before {
-  @apply border-spotify-green transition-colors duration-200 !important;
-  border-width: 2px 2px 0 0;
-  height: 8px;
-  width: 8px;
-}
-
-.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
-  @apply border-spotify-green/80 !important;
+.react-datepicker-year-header {
+  @apply text-white text-base font-medium py-3 border-b border-dark-highlight !important;
 }
 
 .react-datepicker__year {
-  margin: 0.4rem 0 !important;
+  @apply m-0 !important;
 }
 
 .react-datepicker__year-wrapper {
-  @apply max-w-full flex flex-wrap justify-center gap-1 !important;
-  max-width: 220px !important;
-  margin: 0 auto !important;
-  padding: 0.3rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 0.5rem !important;
+  max-width: none !important;
+  margin: 0.5rem !important;
+  justify-items: center !important;
 }
 
 .react-datepicker__year-text {
-  @apply text-dark-text bg-transparent hover:bg-dark-highlight text-sm font-medium transition-all duration-200 !important;
+  @apply text-dark-text hover:text-white text-sm font-medium !important;
   width: 4rem !important;
-  margin: 0 !important;
-  padding: 0.4rem !important;
-  border-radius: 0.5rem;
-  display: inline-block;
-  touch-action: manipulation;
-  cursor: pointer;
-  line-height: 1;
-  border: 1px solid transparent;
+  padding: 0.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0.5rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
 }
 
 .react-datepicker__year-text:hover {
-  @apply text-white border-spotify-green/30 !important;
-  transform: scale(1.05);
+  @apply bg-dark-highlight !important;
 }
 
 .react-datepicker__year-text--selected {
-  @apply bg-spotify-green text-dark-bg font-semibold border-transparent !important;
-  transform: scale(1.05);
+  @apply bg-spotify-green text-dark-bg !important;
 }
 
 .react-datepicker__year-text--keyboard-selected {
-  @apply bg-spotify-green/90 text-dark-bg font-semibold border-transparent !important;
+  @apply bg-spotify-green text-dark-bg !important;
 }
 
-.react-datepicker__year-text--selected:hover,
-.react-datepicker__year-text--keyboard-selected:hover {
-  @apply bg-spotify-green/90 text-dark-bg !important;
-  transform: scale(1.05);
-}
-
-/* Fix positioning */
 .year-picker-popper {
   @apply z-[9999] !important;
 }
 
-/* Hide the triangle */
+.react-datepicker-popper {
+  padding-top: 0.5rem !important;
+}
+
 .react-datepicker__triangle {
   display: none !important;
+}
+
+.react-datepicker__header__dropdown {
+  @apply bg-dark-surface text-white px-4 py-2 !important;
+  border-bottom: 1px solid theme('colors.dark-highlight') !important;
 }
 
 /* Input styling */
