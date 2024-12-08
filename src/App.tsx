@@ -240,7 +240,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/redirect" element={<RedirectHandler />} />
+        <Route path="/callback" element={<RedirectHandler />} />
         <Route path="/" element={
           <div className="min-h-screen bg-dark-bg flex flex-col">
             <Header onLogout={handleLogout} userEmail={userEmail || undefined} isAuthenticated={!!token} />
