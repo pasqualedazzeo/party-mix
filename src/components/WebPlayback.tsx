@@ -144,7 +144,12 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
             return;
         }
 
+        let isInitialized = false;
+
         const initializePlayer = () => {
+            if (isInitialized) return null;
+            isInitialized = true;
+
             const player = new (window as any).Spotify.Player({
                 name: PLAYER_NAME,
                 getOAuthToken: (cb: (token: string) => void) => cb(token),
@@ -194,14 +199,20 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({
             scriptRef.current = script;
 
             window.onSpotifyWebPlaybackSDKReady = () => {
-                const newPlayer = initializePlayer();
-                setPlayer(newPlayer);
-                setIsInitializing(false);
+                if (!player) {
+                    const newPlayer = initializePlayer();
+                    if (newPlayer) {
+                        setPlayer(newPlayer);
+                        setIsInitializing(false);
+                    }
+                }
             };
         } else if (window.Spotify && !player && !isInitializing) {
             const newPlayer = initializePlayer();
-            setPlayer(newPlayer);
-            setIsInitializing(false);
+            if (newPlayer) {
+                setPlayer(newPlayer);
+                setIsInitializing(false);
+            }
         }
 
         return () => {
