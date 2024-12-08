@@ -1,6 +1,6 @@
-const CLIENT_ID = '631760a2d11844e49fe654a07a2c495e';
-const CLIENT_SECRET = '39b8e83710cf4ee7b128fcd58f1ded67';
-const REDIRECT_URI = 'http://localhost:5173/callback';
+const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+const CLIENT_SECRET = import.meta.env.VITE_SPOTIFY_CLIENT_SECRET;
+const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
 const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
 const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
 
